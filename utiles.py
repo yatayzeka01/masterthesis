@@ -13,6 +13,9 @@ pandas.set_option('display.max_rows', None)
 
 
 def find_time_interval(input_path, output_path, min_time_interval_size, min_number_of_distinct_days, start_date_inp):
+    if os.path.exists(output_path):
+        os.remove(output_path)
+
     files = os.listdir(input_path)
     exec_sum_dict = {}
     date_list = []
@@ -75,8 +78,6 @@ def find_time_interval(input_path, output_path, min_time_interval_size, min_numb
 
 
 def write_to_file(filename, text):
-    if os.path.exists(filename):
-        os.remove(filename)
     fh = open(filename, 'a')
     fh.write(text + "\n")
     fh.close()
@@ -146,12 +147,20 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
 
     # Write out short info about the dataset
     info(combinedData, time_interval, input_path)
+    combinedDatatoFileDf = combinedData.copy()
+    combinedDataToFile = datetime_separator(combinedDatatoFileDf)
+
+    if os.path.exists('combinedData.csv'):
+        os.remove('combinedData.csv')
+    combinedDataToFile.to_csv('combinedData.csv', encoding='utf-8', index=False)
+
+
 
     # Turn the pandas dataframe combinedData into a numpy array called finalData
     finalData = array(combinedData)
     # Reshape the finalData accordingly. e.g. (2917, 7, 4). 2917 days, 7 hours and 4 columns
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
-    # random.shuffle(finalData)
+    random.shuffle(finalData)
 
     print(finalData.shape)
     time.sleep(10)
@@ -252,3 +261,12 @@ def info(infoDF, time_interval, input_path):
     print("Unique Stocks of the Dataset: ", "\n")
     print(infoDF.Stock.unique(), "\n")
     print("Total Number of Unique Stocks: ", infoDF.Stock.nunique(), "\n")
+
+
+def datetime_separator(df):
+    # df['date_time'] = datetime.to_string(df['date_time'], format="%d.%m.%Y %H:%M")
+    df['date_time'] = df['date_time'].dt.strftime("%d.%m.%Y %H:%M")
+    df['date'] = df['date_time'].str.extract('(\d\d.\d\d.\d\d\d\d)', expand=True)
+    df['time'] = df['date_time'].str.extract('(\d\d:\d\d)', expand=True)
+    dfOrdered = df.reindex(['date_time', 'date', 'time', 'Stock', 'Sma', 'Volume', 'Open'], axis=1)
+    return dfOrdered
