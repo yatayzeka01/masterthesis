@@ -3,9 +3,11 @@ from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
 import os
-
+from statistics import mean
+from utiles import write_to_file
 
 def train(trainData):
+    print("Train Process")
     # Train models using 2 to 6 hours data
     for i in range(2, 7, 1):
         input = []  # numDays x i x 2
@@ -26,12 +28,11 @@ def train(trainData):
 
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            # maxPrice / lastPrice min max değerlerini bul
-            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            heuristic = maxPrice / lastPrice
             output.append(heuristic)
 
         # TODO: change input/output range depending on volume/price, muffle, start at 0.5 and up/down, later in day goes to 0
-        print("Train Process")
         lstm = LSTM(12, input_shape=(i, 3))
         model = Sequential()
         model.add(lstm)
@@ -39,12 +40,11 @@ def train(trainData):
         model.compile(loss='mae', optimizer='adam', metrics=['accuracy'])
 
         history = model.fit([input], output, validation_split=0.33, epochs=100, batch_size=72, verbose=0)
-        print("History Metrics: ")
-        print(history.history.keys())
-        print("accuracy: ", history.history['accuracy'])
-        print("val_accuracy: ", history.history['val_accuracy'])
-        print("loss: ", history.history['loss'])
-        print("val_loss: ", history.history['val_loss'])
+        print("\nHistory Metrics: ")
+        print("accuracy: ", mean(history.history['accuracy']))
+        print("val_accuracy: ", mean(history.history['val_accuracy']))
+        print("loss: ", mean(history.history['loss']))
+        print("val_loss: ", mean(history.history['val_loss']))
 
         model_name = "./Models/modelRun2_" + str(i) + ".h5"
         if os.path.exists(model_name):
@@ -54,7 +54,11 @@ def train(trainData):
 
 
 def test(testData):
-    print("Test Process")
+    trading_history_file = "trading_history.csv"
+    if os.path.exists(trading_history_file):
+        os.remove(trading_history_file)
+
+    print("\nTest Process")
     modelGain = 1
     dataGain = 1
 
@@ -69,6 +73,7 @@ def test(testData):
     for day in testData:
 
         dataGain = dataGain * day[-1][-1] / day[0][-1]
+
 
         bought = False
         price = 0
@@ -99,38 +104,36 @@ def test(testData):
             outputeval = []  # numDays
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            #heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            heuristic = maxPrice / lastPrice
             outputeval.append(heuristic)
 
             if pred > 0.58 and not bought:
                 # resultseval = model.evaluate([inputeval], outputeval, batch_size=72)
-                print("Intraday buy: ", i)
+                write_to_file(trading_history_file, 'Intraday buy: {0}'.format(i))
                 bought = True
                 price = day[i][-1]
-                print("Intraday buy prediction: ", pred)
-                print("Intraday buy price: ", price)
-                print("Intraday buy moment: ", day[i])
+                write_to_file(trading_history_file, 'Intraday buy prediction: {0}'.format(pred))
+                write_to_file(trading_history_file, 'Intraday buy price: {0}'.format(price))
+                write_to_file(trading_history_file, 'Intraday buy moment: {0}'.format(day[i]))
+                write_to_file(trading_history_file, "=" * 50)
                 buyTime = i
-            # print('test loss, test acc:', resultseval)
             elif pred < 0.53 and bought:
-                # resultseval = model.evaluate([inputeval], outputeval, batch_size=72)
-                print("Intraday sell: ", i)
+                write_to_file(trading_history_file, 'Intraday sell: {0}'.format(i))
                 bought = False
                 modelGain = modelGain * day[i][-1] / price
-                print("Intraday date: ", day[0][0])
-                print("Intraday sell moment: ", day[i])
-                print("Intraday bought at hour " + timechart[buyTime] + " for " + str(price) + ". Sold at hour " + timechart[i] + " for " + str(day[i][-1]) + ".")
-            # print('test loss, test acc:', resultseval)
+                write_to_file(trading_history_file, 'Intraday date: {0}'.format(day[0][0]))
+                write_to_file(trading_history_file, 'Intraday sell moment: {0}'.format(day[i]))
+                write_to_file(trading_history_file, 'Intraday bought at hour {0} for {1}. Sold at hour {2} for {3}.'.format(timechart[buyTime], str(price), timechart[i], str(day[i][-1])))
+                write_to_file(trading_history_file, "=" * 50)
         if bought:
-            # resultseval = model.evaluate([inputeval], outputeval, batch_size=72)
-            print("End of day: ", i)
-            print("Model Number: ", i)
-            print("End of day date: ", day[0][0])
-            print("End of day that moment: ", day[i])
+            write_to_file(trading_history_file, 'End of day: {0}'.format(i))
+            write_to_file(trading_history_file, 'Model Number: {0}'.format(i))
+            write_to_file(trading_history_file, 'End of day date: {0}'.format(day[0][0]))
+            write_to_file(trading_history_file, 'End of day that moment: {0}'.format(day[i]))
             modelGain = modelGain * day[-1][-1] / price
-            print("End of day bought at hour " + timechart[buyTime] + " for " + str(
-                price) + ". Sold at hour 17:00 for " + str(day[i][-1]) + ".")
-        # print('test loss, test acc:', resultseval)
+            write_to_file(trading_history_file, 'End of day bought at hour {0} for {1}. Sold at hour 17:00 for for {2}.'.format(timechart[buyTime], str(price), str(day[i][-1])))
+            write_to_file(trading_history_file, "=" * 50)
 
-    print(dataGain)
-    print(modelGain)
+    print("dataGain: ", dataGain)
+    print("modelGain: ", modelGain)
