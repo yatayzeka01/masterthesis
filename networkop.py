@@ -37,10 +37,12 @@ def train(trainData):
         model = Sequential()
         model.add(lstm)
         model.add(Dense(1))
-        model.compile(loss='mse', optimizer='adam')
+        model.compile(loss='mse', optimizer='adam', metrics=['mean_squared_error'])
 
         history = model.fit([input], output, validation_split=0.33, epochs=100, batch_size=72, verbose=0)
         print("\nHistory Metrics:")
+        print("mean_squared_error: ", mean(history.history['mean_squared_error']))
+        print("val_mean_squared_error: ", mean(history.history['val_mean_squared_error']))
         print("loss: ", mean(history.history['loss']))
         print("val_loss: ", mean(history.history['val_loss']))
 
