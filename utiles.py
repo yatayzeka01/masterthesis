@@ -7,6 +7,10 @@ import time
 import numpy as np
 import pandas
 from finta import TA
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import random
+from screeninfo import get_monitors
 
 np.set_printoptions(threshold=np.inf)
 pandas.set_option('display.max_rows', None)
@@ -148,15 +152,18 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
     # Write out short info about the dataset
     info(combinedData, time_interval, input_path)
     combinedDatatoFileDf = combinedData.copy()
+    combinedDatatoPlot = combinedData.copy()
+    combinedDatatoPlot.set_index('date_time', inplace=True)
+    droplist = plotter(combinedDatatoPlot)
     combinedDataToFile = datetime_separator(combinedDatatoFileDf)
+    combinedDataToFile = combinedDataToFile[~combinedDataToFile['Stock'].isin(droplist)]
 
     if os.path.exists('combinedData.csv'):
         os.remove('combinedData.csv')
     combinedDataToFile.to_csv('combinedData.csv', encoding='utf-8', index=False)
 
-
-
     # Turn the pandas dataframe combinedData into a numpy array called finalData
+    combinedData = combinedData[~combinedData['Stock'].isin(droplist)]
     finalData = array(combinedData)
     # Reshape the finalData accordingly. e.g. (2917, 7, 4). 2917 days, 7 hours and 4 columns
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
@@ -214,8 +221,8 @@ def minmaxnormalize(dfToNormalize, time_interval):
     timestampvalue = []
     for i in zerodayslistindex:
         for h in time_interval:
-            eleman = i + " " + h + ":00"
-            timestampindex.append(eleman)
+            time_extension = i + " " + h + ":00"
+            timestampindex.append(time_extension)
 
     for vv in zerodayslistvalue:
         for _ in range(leno):
@@ -270,3 +277,72 @@ def datetime_separator(df):
     df['time'] = df['date_time'].str.extract('(\d\d:\d\d)', expand=True)
     dfOrdered = df.reindex(['date_time', 'date', 'time', 'Stock', 'Sma', 'Volume', 'Open'], axis=1)
     return dfOrdered
+
+
+def plotter(combinedDatatoPlot):
+    for m in get_monitors():
+        width = m.width
+        height = m.height
+    fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
+
+    thrashlist = []
+    stocks = combinedDatatoPlot[['Stock', 'Open']]
+    num_of_stocks = len(stocks.Stock.unique())
+    color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
+    for stock in stocks.Stock.unique():
+        c = next(color)
+        deneme = stocks[stocks.Stock == stock]
+        stockDF = pandas.DataFrame({stock: deneme["Open"]})
+        stockDF.reset_index(level=0, inplace=True)
+        thres = stockDF[stockDF[stock] > 0.4]
+        if not thres.empty:
+            print("Open Price Above:", stock)
+            thrashlist.append(stock)
+            continue
+        mhres = stockDF[stockDF[stock] < 0.005]
+        if not mhres.empty:
+            print("Open Price Below:", stock)
+            thrashlist.append(stock)
+            continue
+        plotindex = random.randrange(1, len(stockDF.index) - 1)
+        plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
+        plt.ylabel('Open Price')
+        plt.xlabel('Date')
+        plt.legend(loc="upper left", fontsize=10)
+        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]), xytext=(15, 15),
+                     textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
+    fig.savefig("open_plot.png", dpi=600)
+
+    plt.clf()
+    fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
+
+    stocks = combinedDatatoPlot[['Stock', 'Volume']]
+    num_of_stocks = len(stocks.Stock.unique())
+    color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
+    for stock in stocks.Stock.unique():
+        if stock in thrashlist:
+            continue
+        c = next(color)
+        deneme = stocks[stocks.Stock == stock]
+        stockDF = pandas.DataFrame({stock: deneme["Volume"]})
+        stockDF.reset_index(level=0, inplace=True)
+        thres = stockDF[stockDF[stock] > 0.4]
+        if not thres.empty:
+            print("Volume Above:", stock)
+            thrashlist.append(stock)
+            continue
+        mhres = stockDF[stockDF[stock] < 0.0000005]
+        if not mhres.empty:
+            print("Volume Below:", stock)
+            thrashlist.append(stock)
+            continue
+        plotindex = random.randrange(1, len(stockDF.index) - 1)
+        plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
+        plt.ylabel('Volume')
+        plt.xlabel('Date')
+        plt.legend(loc="upper left", fontsize=10)
+        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]), xytext=(15, 15),
+                     textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
+    fig.savefig("volume_plot.png", dpi=600)
+
+    return thrashlist
