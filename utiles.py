@@ -291,16 +291,16 @@ def plotter(combinedDatatoPlot):
     color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
     for stock in stocks.Stock.unique():
         c = next(color)
-        deneme = stocks[stocks.Stock == stock]
-        stockDF = pandas.DataFrame({stock: deneme["Open"]})
+        stockDFRaw = stocks[stocks.Stock == stock]
+        stockDF = pandas.DataFrame({stock: stockDFRaw["Open"]})
         stockDF.reset_index(level=0, inplace=True)
-        thres = stockDF[stockDF[stock] > 0.4]
-        if not thres.empty:
+        thresholdUp = stockDF[stockDF[stock] > 0.4]
+        if not thresholdUp.empty:
             print("Open Price Above:", stock)
             thrashlist.append(stock)
             continue
-        mhres = stockDF[stockDF[stock] < 0.005]
-        if not mhres.empty:
+        thresholdDown = stockDF[stockDF[stock] < 0.005]
+        if not thresholdDown.empty:
             print("Open Price Below:", stock)
             thrashlist.append(stock)
             continue
@@ -323,16 +323,16 @@ def plotter(combinedDatatoPlot):
         if stock in thrashlist:
             continue
         c = next(color)
-        deneme = stocks[stocks.Stock == stock]
-        stockDF = pandas.DataFrame({stock: deneme["Volume"]})
+        stockDFRaw = stocks[stocks.Stock == stock]
+        stockDF = pandas.DataFrame({stock: stockDFRaw["Volume"]})
         stockDF.reset_index(level=0, inplace=True)
-        thres = stockDF[stockDF[stock] > 0.4]
-        if not thres.empty:
+        thresholdUp = stockDF[stockDF[stock] > 0.4]
+        if not thresholdUp.empty:
             print("Volume Above:", stock)
             thrashlist.append(stock)
             continue
-        mhres = stockDF[stockDF[stock] < 0.0000005]
-        if not mhres.empty:
+        thresholdDown = stockDF[stockDF[stock] < 0.0000005]
+        if not thresholdDown.empty:
             print("Volume Below:", stock)
             thrashlist.append(stock)
             continue
@@ -344,5 +344,5 @@ def plotter(combinedDatatoPlot):
         plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]), xytext=(15, 15),
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
     fig.savefig("volume_plot.png", dpi=600)
-
+    plt.close()
     return thrashlist
