@@ -5,13 +5,17 @@ from keras.layers import LSTM
 import os
 from statistics import mean
 from utiles import write_to_file
+import matplotlib.pyplot as plt
+import numpy as np
 
 def train(trainData):
     print("Train Process")
+    color = iter(plt.cm.jet(np.linspace(0, 1, 5)))
     # Train models using 2 to 6 hours data
     for i in range(2, 7, 1):
         input = []  # numDays x i x 2
         output = []  # numDays
+
 
         # Each day array is consisted of 7 rows
         for day in trainData:
@@ -28,9 +32,10 @@ def train(trainData):
 
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            #heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
             heuristic = maxPrice / lastPrice
             output.append(heuristic)
+
 
         # TODO: change input/output range depending on volume/price, muffle, start at 0.5 and up/down, later in day goes to 0
         lstm = LSTM(12, input_shape=(i, 3))
@@ -46,10 +51,38 @@ def train(trainData):
         print("loss: ", mean(history.history['loss']))
         print("val_loss: ", mean(history.history['val_loss']))
 
-        model_name = "./Models/modelRun2_" + str(i) + ".h5"
+        #plt.plot(history.history['mean_squared_error'])
+        c = next(color)
+        plt.subplot(4, 1, 1)
+        plt.plot(history.history['mean_squared_error'], c=c, label=i)
+        plt.legend(loc="upper left", fontsize=10)
+        plt.title('Training Metrics')
+        plt.ylabel('mean_squared_error')
+
+        plt.subplot(4, 1, 2)
+        plt.plot(history.history['val_mean_squared_error'], c=c, label=i)
+        plt.legend(loc="upper left", fontsize=10)
+        plt.ylabel('val_mean_squared_error')
+
+        plt.subplot(4, 1, 3)
+        plt.plot(history.history['loss'], c=c, label=i)
+        plt.legend(loc="upper left", fontsize=10)
+        plt.ylabel('loss')
+
+        plt.subplot(4, 1, 4)
+        plt.plot(history.history['val_loss'], c=c, label=i)
+        plt.legend(loc="upper left", fontsize=10)
+        plt.xlabel('Epoch')
+        plt.ylabel('val_loss')
+
+        model_name = "./Models/modelRun_" + str(i) + ".h5"
         if os.path.exists(model_name):
             os.remove(model_name)
         model.save(model_name)
+
+    plt.savefig("train_metrics_plot.png", dpi=600)
+
+    plt.close()
     return
 
 
