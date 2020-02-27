@@ -10,3 +10,6 @@ VOLUME
 
 TRAIN METRICS
 ![alt text](https://raw.githubusercontent.com/yatayzeka01/masterthesis/master/train_metrics_plot.png)
+
+TEST METRICS
+![alt text](https://raw.githubusercontent.com/yatayzeka01/masterthesis/master/test_metrics_plot.png)
