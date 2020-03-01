@@ -1,3 +1,6 @@
+import warnings
+
+warnings.filterwarnings('ignore')
 from pandas import read_csv, to_datetime, DataFrame
 import os
 from datetime import datetime
@@ -14,6 +17,12 @@ from screeninfo import get_monitors
 
 np.set_printoptions(threshold=np.inf)
 pandas.set_option('display.max_rows', None)
+
+
+def write_to_file(filename, text):
+    fh = open(filename, 'a')
+    fh.write(text + "\n")
+    fh.close()
 
 
 def find_time_interval(input_path, output_path, min_time_interval_size, min_number_of_distinct_days, start_date_inp):
@@ -79,12 +88,6 @@ def find_time_interval(input_path, output_path, min_time_interval_size, min_numb
     time_interval = sorted(exec_sum_dict, key=exec_sum_dict.get, reverse=True)[0]
 
     return time_interval, valid_stocks_list
-
-
-def write_to_file(filename, text):
-    fh = open(filename, 'a')
-    fh.write(text + "\n")
-    fh.close()
 
 
 def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
@@ -169,7 +172,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
     random.shuffle(finalData)
 
-    print(finalData.shape)
+    print("Final Data Shape: ", finalData.shape)
     time.sleep(10)
     return finalData
 
@@ -309,7 +312,8 @@ def plotter(combinedDatatoPlot):
         plt.ylabel('Open Price')
         plt.xlabel('Date')
         plt.legend(loc="upper left", fontsize=10)
-        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]), xytext=(15, 15),
+        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]),
+                     xytext=(15, 15),
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
     fig.savefig("open_plot.png", dpi=600)
 
@@ -341,7 +345,8 @@ def plotter(combinedDatatoPlot):
         plt.ylabel('Volume')
         plt.xlabel('Date')
         plt.legend(loc="upper left", fontsize=10)
-        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]), xytext=(15, 15),
+        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]),
+                     xytext=(15, 15),
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
     fig.savefig("volume_plot.png", dpi=600)
     plt.close()
