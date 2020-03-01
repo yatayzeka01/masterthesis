@@ -1,3 +1,6 @@
+import warnings
+
+warnings.filterwarnings('ignore')
 from numpy import array, column_stack
 from keras.models import Sequential, load_model
 from keras.layers import Dense
@@ -9,10 +12,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from collections import defaultdict
+from screeninfo import get_monitors
 
 
 def train(trainData):
     print("Train Process")
+
+    if not os.path.exists('Models'):
+        os.mkdir('Models')
+
     color = iter(plt.cm.jet(np.linspace(0, 1, 5)))
     # Train models using 2 to 6 hours data
     for i in range(2, 7, 1):
@@ -34,8 +42,8 @@ def train(trainData):
 
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
-            heuristic = maxPrice / lastPrice
+            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            # heuristic = maxPrice / lastPrice
             output.append(heuristic)
 
         # TODO: change input/output range depending on volume/price, muffle, start at 0.5 and up/down, later in day goes to 0
@@ -139,8 +147,8 @@ def test(testData):
             outputeval = []  # numDays
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
-            heuristic = maxPrice / lastPrice
+            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            # heuristic = maxPrice / lastPrice
             outputeval.append(heuristic)
 
             plot_pred[i].append(float(pred))
@@ -180,6 +188,12 @@ def test(testData):
     print("dataGain: ", dataGain)
     print("modelGain: ", modelGain)
 
+    for m in get_monitors():
+        width = m.width
+        height = m.height
+
+    fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
+
     plot_position = 1
     for x in range(2, 7):
         plt.subplots_adjust(bottom=0.08, hspace=1, right=0.85, top=0.95)
@@ -194,5 +208,5 @@ def test(testData):
         plt.xlabel('Hours')
         plt.ylabel('Value')
         plot_position += 1
-    plt.savefig("test_metrics_plot.png", dpi=600)
+    fig.savefig("test_metrics_plot.png", dpi=600)
     plt.close()
