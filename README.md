@@ -1,4 +1,4 @@
-python3 run.py data info.txt 7 800 '01.01.2015' 1
+python3 run.py predict -i data -o info.txt -min_s 7 -min_d 800 -sdate '01.01.2015' -t 1
 
 Models directory should be present at the current working directory while running the run command
 
