@@ -13,7 +13,9 @@ from finta import TA
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import random
-from screeninfo import get_monitors
+import seaborn as sn
+from pandas_profiling import ProfileReport
+import matplotlib as mpl
 
 np.set_printoptions(threshold=np.inf)
 pandas.set_option('display.max_rows', None)
@@ -75,8 +77,8 @@ def find_time_interval(input_path, output_path, min_time_interval_size, min_numb
                 write_to_file(output_path, 'The most frequent time intervals for {0} stock: {1}'.format(stock, x))
                 write_to_file(output_path, 'Start date for {0} stock: {1}'.format(stock, start_date))
                 write_to_file(output_path, 'Last date for {0} stock: {1}'.format(stock, end_date))
-                write_to_file(output_path, 'Number of distinct days in {0} stock data: {1}\n'.format(stock,
-                                                                                                     number_of_distinct_days))
+                write_to_file(output_path,
+                              'Number of distinct days in {0} stock data: {1}\n'.format(stock, number_of_distinct_days))
 
     write_to_file(output_path, 'Executive Summary')
     write_to_file(output_path, 'Number of stocks in the dataset: {0}'.format(len(files)))
@@ -90,7 +92,7 @@ def find_time_interval(input_path, output_path, min_time_interval_size, min_numb
     return time_interval, valid_stocks_list
 
 
-def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
+def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height):
     # leno is the length of most_frequent_time interval that is 7 for our case.
     leno = len(time_interval)
     files = os.listdir(input_path)
@@ -157,16 +159,23 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag):
     combinedDatatoFileDf = combinedData.copy()
     combinedDatatoPlot = combinedData.copy()
     combinedDatatoPlot.set_index('date_time', inplace=True)
-    droplist = plotter(combinedDatatoPlot)
+    plotter(combinedDatatoPlot, width, height)
     combinedDataToFile = datetime_separator(combinedDatatoFileDf)
-    combinedDataToFile = combinedDataToFile[~combinedDataToFile['Stock'].isin(droplist)]
+
+    corrDF = combinedDataToFile.corr()
+    svm = sn.heatmap(corrDF, annot=True)
+    figuresn = svm.get_figure()
+    figuresn.savefig("correlation_plot.png", dpi=600)
 
     if os.path.exists('combinedData.csv'):
         os.remove('combinedData.csv')
     combinedDataToFile.to_csv('combinedData.csv', encoding='utf-8', index=False)
 
     # Turn the pandas dataframe combinedData into a numpy array called finalData
-    combinedData = combinedData[~combinedData['Stock'].isin(droplist)]
+
+    combinedDataToReport = combinedData.copy()
+    profile_report(combinedDataToReport)
+
     finalData = array(combinedData)
     # Reshape the finalData accordingly. e.g. (2917, 7, 4). 2917 days, 7 hours and 4 columns
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
@@ -186,7 +195,6 @@ def technical_indicators(tiDF):
         columns={'date_time': 'Date', 'Date': 'day', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close',
                  'Volume': 'volume'}, inplace=True)
     ohlcv.set_index('Date', inplace=True)
-    ohlc = ohlcv[['open', 'high', 'low', 'close']]
 
     ohlcv['sma'] = TA.SMA(ohlcv, 2)
     stock = tiDF['Stock'].unique().tolist()[0]
@@ -274,7 +282,6 @@ def info(infoDF, time_interval, input_path):
 
 
 def datetime_separator(df):
-    # df['date_time'] = datetime.to_string(df['date_time'], format="%d.%m.%Y %H:%M")
     df['date_time'] = df['date_time'].dt.strftime("%d.%m.%Y %H:%M")
     df['date'] = df['date_time'].str.extract('(\d\d.\d\d.\d\d\d\d)', expand=True)
     df['time'] = df['date_time'].str.extract('(\d\d:\d\d)', expand=True)
@@ -282,13 +289,10 @@ def datetime_separator(df):
     return dfOrdered
 
 
-def plotter(combinedDatatoPlot):
-    for m in get_monitors():
-        width = m.width
-        height = m.height
+def plotter(combinedDatatoPlot, width, height):
+    mpl.rcParams.update(mpl.rcParamsDefault)
     fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
 
-    thrashlist = []
     stocks = combinedDatatoPlot[['Stock', 'Open']]
     num_of_stocks = len(stocks.Stock.unique())
     color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
@@ -297,16 +301,6 @@ def plotter(combinedDatatoPlot):
         stockDFRaw = stocks[stocks.Stock == stock]
         stockDF = pandas.DataFrame({stock: stockDFRaw["Open"]})
         stockDF.reset_index(level=0, inplace=True)
-        thresholdUp = stockDF[stockDF[stock] > 0.4]
-        if not thresholdUp.empty:
-            print("Open Price Above:", stock)
-            thrashlist.append(stock)
-            continue
-        thresholdDown = stockDF[stockDF[stock] < 0.005]
-        if not thresholdDown.empty:
-            print("Open Price Below:", stock)
-            thrashlist.append(stock)
-            continue
         plotindex = random.randrange(1, len(stockDF.index) - 1)
         plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
         plt.ylabel('Open Price')
@@ -324,22 +318,10 @@ def plotter(combinedDatatoPlot):
     num_of_stocks = len(stocks.Stock.unique())
     color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
     for stock in stocks.Stock.unique():
-        if stock in thrashlist:
-            continue
         c = next(color)
         stockDFRaw = stocks[stocks.Stock == stock]
         stockDF = pandas.DataFrame({stock: stockDFRaw["Volume"]})
         stockDF.reset_index(level=0, inplace=True)
-        thresholdUp = stockDF[stockDF[stock] > 0.4]
-        if not thresholdUp.empty:
-            print("Volume Above:", stock)
-            thrashlist.append(stock)
-            continue
-        thresholdDown = stockDF[stockDF[stock] < 0.0000005]
-        if not thresholdDown.empty:
-            print("Volume Below:", stock)
-            thrashlist.append(stock)
-            continue
         plotindex = random.randrange(1, len(stockDF.index) - 1)
         plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
         plt.ylabel('Volume')
@@ -350,4 +332,18 @@ def plotter(combinedDatatoPlot):
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
     fig.savefig("volume_plot.png", dpi=600)
     plt.close()
-    return thrashlist
+
+
+def plot_heatmap(fig_name, heatmapDF, i, width, height):
+    plt.figure(i, figsize=(width / 100., height / 100.), dpi=100)
+    corrinpoutDF = heatmapDF.corr()
+    svm = sn.heatmap(corrinpoutDF, annot=True)
+    figuresn = svm.get_figure()
+    figuresn.savefig(fig_name, dpi=600)
+    plt.close()
+
+
+def profile_report(dfToReport):
+    dfToReport.set_index('date_time', inplace=True)
+    profile = ProfileReport(dfToReport, title='Pandas Profiling Report', html={'style': {'full_width': True}})
+    profile.to_file(output_file='output.html')
