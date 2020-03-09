@@ -8,19 +8,19 @@ from keras.layers import LSTM
 import os
 from statistics import mean
 from utiles import write_to_file
+from utiles import plot_heatmap
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from screeninfo import get_monitors
 
 
-def train(trainData):
+def train(trainData, width, height):
     print("Train Process")
 
     if not os.path.exists('Models'):
         os.mkdir('Models')
-
+    plt.figure(figsize=(width / 100., height / 100.), dpi=100)
     color = iter(plt.cm.jet(np.linspace(0, 1, 5)))
     # Train models using 2 to 6 hours data
     for i in range(2, 7, 1):
@@ -42,8 +42,8 @@ def train(trainData):
 
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
-            # heuristic = maxPrice / lastPrice
+            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            heuristic = maxPrice / lastPrice
             output.append(heuristic)
 
         # TODO: change input/output range depending on volume/price, muffle, start at 0.5 and up/down, later in day goes to 0
@@ -60,7 +60,21 @@ def train(trainData):
         print("loss: ", mean(history.history['loss']))
         print("val_loss: ", mean(history.history['val_loss']))
 
-        # plt.plot(history.history['mean_squared_error'])
+        new_input = []
+        for b in input:
+            col_totals = [sum(x) / len(b) for x in zip(*b)]
+            new_input.append(col_totals)
+
+        iterasyon = 0
+        for o in output:
+            new_input[iterasyon].append(o)
+            iterasyon = iterasyon + 1
+
+        inpout = pd.DataFrame(new_input, columns=["Open", "Volume", "Sma", "Heuristic Price"])
+
+        figure_name = "correlation_plot_" + str(i) + ".png"
+        plot_heatmap(figure_name, inpout, i, width, height)
+
         c = next(color)
         plt.subplot(4, 1, 1)
         plt.plot(history.history['mean_squared_error'], c=c, label=i)
@@ -95,7 +109,7 @@ def train(trainData):
     return
 
 
-def test(testData):
+def test(testData, width, height):
     trading_history_file = "trading_history.csv"
     if os.path.exists(trading_history_file):
         os.remove(trading_history_file)
@@ -147,15 +161,14 @@ def test(testData):
             outputeval = []  # numDays
             lastPrice = day[i - 1][-1]
             maxPrice = max([item[-1] for item in day[i:]])
-            heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
-            # heuristic = maxPrice / lastPrice
+            # heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
+            heuristic = maxPrice / lastPrice
             outputeval.append(heuristic)
 
             plot_pred[i].append(float(pred))
             plot_heuristic[i].append(heuristic)
 
             if pred > 0.75 and not bought:
-                # resultseval = model.evaluate([inputeval], outputeval, batch_size=72)
                 write_to_file(trading_history_file, 'Intraday buy: {0}'.format(i))
                 bought = True
                 price = day[i][-1]
@@ -187,10 +200,6 @@ def test(testData):
 
     print("dataGain: ", dataGain)
     print("modelGain: ", modelGain)
-
-    for m in get_monitors():
-        width = m.width
-        height = m.height
 
     fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
 
