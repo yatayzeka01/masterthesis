@@ -99,7 +99,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
 
     # Create empty dataframes consists of following columns
     combinedDataNormal = DataFrame(columns=['date_time', 'Stock', 'Volume', 'Open'])
-    combinedDataTi = DataFrame(columns=['date_time', 'Stock', 'Sma', 'Volume', 'Open'])
+    combinedDataTi = DataFrame()
     # Read all files in the input_path and append them to combinedData dataframe accordingly.
 
     for file in files:
@@ -132,9 +132,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
         if tiFlag:
 
             newData = technical_indicators(newData)
-            newData = newData.reindex(['date_time', 'Stock', 'Sma', 'Volume', 'Open'], axis=1)
-            cols = ['date_time', 'Stock', 'Sma', 'Volume', 'Open']
-            newDataOrdered = newData[cols]
+            newDataOrdered = newData[newData.columns]
             combinedDataTi = combinedDataTi.append(newDataOrdered)
         else:
             newData = newData.drop(['Time', 'Close', 'High', 'Low', 'Date'], axis=1)
@@ -174,16 +172,19 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
     # Turn the pandas dataframe combinedData into a numpy array called finalData
 
     combinedDataToReport = combinedData.copy()
-    profile_report(combinedDataToReport)
-
+    # profile_report(combinedDataToReport)
+    print("kombinte")
+    print(combinedData.head(5))
+    finalDataCoList = list(combinedData.columns)
     finalData = array(combinedData)
+    # finalData = combinedData.to_records(index=False)
     # Reshape the finalData accordingly. e.g. (2917, 7, 4). 2917 days, 7 hours and 4 columns
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
     random.shuffle(finalData)
 
     print("Final Data Shape: ", finalData.shape)
     time.sleep(10)
-    return finalData
+    return finalData, finalDataCoList
 
 
 def technical_indicators(tiDF):
@@ -191,40 +192,57 @@ def technical_indicators(tiDF):
 
     ohlcv = tiDF[['date_time', 'Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
 
-    ohlcv.rename(
-        columns={'date_time': 'Date', 'Date': 'day', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close',
-                 'Volume': 'volume'}, inplace=True)
+    for i in ohlcv.columns:
+        ohlcv = ohlcv.rename(columns={str(i): str(i.lower())})
+
+    ohlcv.rename(columns={'date_time': 'Date', 'date': 'day'}, inplace=True)
     ohlcv.set_index('Date', inplace=True)
 
-    ohlcv['sma'] = TA.SMA(ohlcv, 2)
+    ohlcv['sma2'] = TA.SMA(ohlcv, 2)
+    ohlcv['sma3'] = TA.SMA(ohlcv, 3)
+    ohlcv['sma4'] = TA.SMA(ohlcv, 4)
+    ohlcv['sma5'] = TA.SMA(ohlcv, 5)
+    ohlcv['sma6'] = TA.SMA(ohlcv, 6)
+    ohlcv['sma7'] = TA.SMA(ohlcv, 7)
+
+    ohlcv['rsi'] = TA.RSI(ohlcv)
+    ohlcv['cci'] = TA.CCI(ohlcv)
+    ohlcv['adx'] = TA.ADX(ohlcv)
+
     stock = tiDF['Stock'].unique().tolist()[0]
     ohlcv['Stock'] = stock
 
     ohlcv = ohlcv.dropna()
 
     numTimes = ohlcv.groupby('day').count()
-    shortDays = numTimes[numTimes.sma != 7].index.values
+    shortDays = numTimes[numTimes.sma2 != 7].index.values
     ohlcv = ohlcv[~ohlcv['day'].isin(shortDays)]
 
     ohlcv = ohlcv.drop(['high', 'low', 'close', 'day'], axis=1)
     ohlcv.reset_index(level=0, inplace=True)
-    ohlcv.rename(columns={'Date': 'date_time', 'open': 'Open', 'volume': 'Volume', 'sma': 'Sma'}, inplace=True)
-    ohlcv = ohlcv.reindex(['date_time', 'Stock', 'Sma', 'Volume', 'Open'], axis=1)
+    for i in ohlcv.columns:
+        ohlcv = ohlcv.rename(columns={str(i): str(i.capitalize())})
+
+    ohlcv.rename(columns={'Date': 'date_time'}, inplace=True)
 
     return ohlcv
 
 
 def minmaxnormalize(dfToNormalize, time_interval):
     # Clean the data after normalization and remove the rows with Volume and Open values as 0.0
+    i = list(dfToNormalize.columns)
+    i.remove('Stock')
+    i.remove('date_time')
+    print(i)
     leno = len(time_interval)
     mms = MinMaxScaler()
-    dfToNormalize[['Volume', 'Open', 'Sma']] = mms.fit_transform(dfToNormalize[['Volume', 'Open', 'Sma']])
-
+    dfToNormalize[i] = mms.fit_transform(dfToNormalize[i])
+    print("normato")
     zerodays = dfToNormalize.loc[
-        (dfToNormalize['Open'] == 0.0) | (dfToNormalize['Volume'] == 0.0) | (dfToNormalize['Sma'] == 0.0)]
+        (dfToNormalize[i[0]] == 0.0) | (dfToNormalize[i[1]] == 0.0) | (dfToNormalize[i[2]] == 0.0)]
     zerodays['date_to_remove'] = zerodays['date_time'].dt.date
     zerodayextended = zerodays[['date_to_remove', 'Stock']]
-
+    print("tornato")
     zerodayslistindex = zerodayextended['date_to_remove'].to_string(index=False).split('\n')
     zerodayslistvalue = zerodayextended['Stock'].to_string(index=False).split('\n')
 
@@ -285,7 +303,7 @@ def datetime_separator(df):
     df['date_time'] = df['date_time'].dt.strftime("%d.%m.%Y %H:%M")
     df['date'] = df['date_time'].str.extract('(\d\d.\d\d.\d\d\d\d)', expand=True)
     df['time'] = df['date_time'].str.extract('(\d\d:\d\d)', expand=True)
-    dfOrdered = df.reindex(['date_time', 'date', 'time', 'Stock', 'Sma', 'Volume', 'Open'], axis=1)
+    dfOrdered = df.reindex(df.columns, axis=1)
     return dfOrdered
 
 
