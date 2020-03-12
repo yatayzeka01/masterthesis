@@ -1,6 +1,6 @@
 import ast
-from utiles2 import find_time_interval, prepare
-from networkop2 import train, test
+from utiles import find_time_interval, prepare
+from networkop import train, test
 import click
 from screeninfo import get_monitors
 
