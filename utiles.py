@@ -172,12 +172,9 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
     # Turn the pandas dataframe combinedData into a numpy array called finalData
 
     combinedDataToReport = combinedData.copy()
-    # profile_report(combinedDataToReport)
-    print("kombinte")
-    print(combinedData.head(5))
+    profile_report(combinedDataToReport)
     finalDataCoList = list(combinedData.columns)
     finalData = array(combinedData)
-    # finalData = combinedData.to_records(index=False)
     # Reshape the finalData accordingly. e.g. (2917, 7, 4). 2917 days, 7 hours and 4 columns
     finalData = finalData.reshape((int(finalData.shape[0] / leno), leno, finalData.shape[1]))
     random.shuffle(finalData)
@@ -237,12 +234,10 @@ def minmaxnormalize(dfToNormalize, time_interval):
     leno = len(time_interval)
     mms = MinMaxScaler()
     dfToNormalize[i] = mms.fit_transform(dfToNormalize[i])
-    print("normato")
     zerodays = dfToNormalize.loc[
         (dfToNormalize[i[0]] == 0.0) | (dfToNormalize[i[1]] == 0.0) | (dfToNormalize[i[2]] == 0.0)]
     zerodays['date_to_remove'] = zerodays['date_time'].dt.date
     zerodayextended = zerodays[['date_to_remove', 'Stock']]
-    print("tornato")
     zerodayslistindex = zerodayextended['date_to_remove'].to_string(index=False).split('\n')
     zerodayslistvalue = zerodayextended['Stock'].to_string(index=False).split('\n')
 
@@ -307,51 +302,6 @@ def datetime_separator(df):
     return dfOrdered
 
 
-def plotter(combinedDatatoPlot, width, height):
-    mpl.rcParams.update(mpl.rcParamsDefault)
-    fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
-
-    stocks = combinedDatatoPlot[['Stock', 'Open']]
-    num_of_stocks = len(stocks.Stock.unique())
-    color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
-    for stock in stocks.Stock.unique():
-        c = next(color)
-        stockDFRaw = stocks[stocks.Stock == stock]
-        stockDF = pandas.DataFrame({stock: stockDFRaw["Open"]})
-        stockDF.reset_index(level=0, inplace=True)
-        plotindex = random.randrange(1, len(stockDF.index) - 1)
-        plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
-        plt.ylabel('Open Price')
-        plt.xlabel('Date')
-        plt.legend(loc="upper left", fontsize=10)
-        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]),
-                     xytext=(15, 15),
-                     textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
-    fig.savefig("open_plot.png", dpi=600)
-
-    plt.clf()
-    fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
-
-    stocks = combinedDatatoPlot[['Stock', 'Volume']]
-    num_of_stocks = len(stocks.Stock.unique())
-    color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
-    for stock in stocks.Stock.unique():
-        c = next(color)
-        stockDFRaw = stocks[stocks.Stock == stock]
-        stockDF = pandas.DataFrame({stock: stockDFRaw["Volume"]})
-        stockDF.reset_index(level=0, inplace=True)
-        plotindex = random.randrange(1, len(stockDF.index) - 1)
-        plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
-        plt.ylabel('Volume')
-        plt.xlabel('Date')
-        plt.legend(loc="upper left", fontsize=10)
-        plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]),
-                     xytext=(15, 15),
-                     textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c), color=c)
-    fig.savefig("volume_plot.png", dpi=600)
-    plt.close()
-
-
 def plot_heatmap(fig_name, heatmapDF, i, width, height):
     plt.figure(i, figsize=(width / 100., height / 100.), dpi=100)
     corrinpoutDF = heatmapDF.corr()
@@ -365,3 +315,32 @@ def profile_report(dfToReport):
     dfToReport.set_index('date_time', inplace=True)
     profile = ProfileReport(dfToReport, title='Pandas Profiling Report', html={'style': {'full_width': True}})
     profile.to_file(output_file='output.html')
+
+
+def plotter(combinedDatatoPlot, width, height):
+    i = list(combinedDatatoPlot.columns)
+    i.remove("Stock")
+
+    for x in i:
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        fig = plt.figure(figsize=(width / 100., height / 100.), dpi=100)
+        stocks = combinedDatatoPlot[['Stock', x]]
+        num_of_stocks = len(stocks.Stock.unique())
+        color = iter(plt.cm.jet(np.linspace(0, 1, num_of_stocks)))
+        for stock in stocks.Stock.unique():
+            c = next(color)
+            stockDFRaw = stocks[stocks.Stock == stock]
+            stockDF = pandas.DataFrame({stock: stockDFRaw[x]})
+            stockDF.reset_index(level=0, inplace=True)
+            plotindex = random.randrange(1, len(stockDF.index) - 1)
+            plt.plot(stockDF["date_time"], stockDF[stock], c=c, label=stock)
+            plt.ylabel(x)
+            plt.xlabel('Date')
+            plt.legend(loc="upper left", fontsize=10)
+            plt.annotate(stock, (mdates.date2num(stockDF["date_time"][plotindex]), stockDF[stock][plotindex]),
+                         xytext=(15, 15), textcoords='offset points', arrowprops=dict(arrowstyle='-|>', color=c),
+                         color=c)
+        fig_name = str(x) + "_plot.png"
+        fig.savefig(fig_name, dpi=600)
+        plt.clf()
+    plt.close()
