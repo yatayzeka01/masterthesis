@@ -16,7 +16,8 @@ from screeninfo import get_monitors
 @click.option("--start_date", "-sdate", "start_date_inp", required=True, default="01.01.2015",
 			help="Start date to process the input files '01.01.2015' e.g.")
 @click.option("--ti", "-t", "tiflag", required=True, default=1, help="Flag for the additional technical indicators")
-def main(command, input_path, output_path, min_time_interval_size, min_number_of_distinct_days, start_date_inp, tiflag):
+@click.option("--usd", "-u", "usdflag", required=True, default=1, help="Flag for the additional usd currency indicator")
+def main(command, input_path, output_path, min_time_interval_size, min_number_of_distinct_days, start_date_inp, tiflag, usdflag):
 	""" Process the input files in the given directory
 		Train Models
 		Make future predictions
@@ -35,7 +36,7 @@ def main(command, input_path, output_path, min_time_interval_size, min_number_of
 	time_interval, valid_stocks_list = find_time_interval(input_path, output_path, int(min_time_interval_size), int(min_number_of_distinct_days), start_date_inp)
 	time_interval = ast.literal_eval(time_interval)
 	time_interval = [n.strip() for n in time_interval]
-	data, finalDataCoListTrain = prepare(input_path, time_interval, valid_stocks_list, tiflag, width, height)
+	data, finalDataCoListTrain = prepare(input_path, time_interval, valid_stocks_list, tiflag, width, height, usdflag)
 	n = int(0.70 * data.shape[0])
 	trainData = data[:n, :, :]
 	testData = data[n:, :, :]
