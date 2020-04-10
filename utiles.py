@@ -93,7 +93,7 @@ def find_time_interval(input_path, output_path, min_time_interval_size, min_numb
     return time_interval, valid_stocks_list
 
 
-def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height):
+def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height, usdflag):
     # leno is the length of most_frequent_time interval that is 7 for our case.
     leno = len(time_interval)
     files = os.listdir(input_path)
@@ -132,7 +132,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
 
         if tiFlag:
 
-            newData = technical_indicators(newData)
+            newData = technical_indicators(newData, usdflag)
             newDataOrdered = newData[newData.columns]
             combinedDataTi = combinedDataTi.append(newDataOrdered)
         else:
@@ -185,7 +185,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height)
     return finalData, finalDataCoList
 
 
-def technical_indicators(tiDF):
+def technical_indicators(tiDF, usdflag):
     # tiDF 'date_time', 'Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Stock'
 
     ohlcv = tiDF[['date_time', 'Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
@@ -239,13 +239,17 @@ def technical_indicators(tiDF):
 
     ohlcv.rename(columns={'Date': 'date_time'}, inplace=True)
 
-    totale = pd.read_csv("total.csv")
 
-    totale['date_time'] = to_datetime(totale['date_time'], format="%Y-%m-%d %H:%M:%S")
     pd.options.display.max_columns = None
     pd.options.display.max_rows = None
 
-    result = pd.merge(ohlcv, totale, how='inner', on=['date_time'])
+    if usdflag:
+        totale = pd.read_csv("total.csv")
+        totale['date_time'] = to_datetime(totale['date_time'], format="%Y-%m-%d %H:%M:%S")
+        result = pd.merge(ohlcv, totale, how='inner', on=['date_time'])
+    else:
+        result = ohlcv.copy()
+
     print(result.info())
     print(result.head(5))
     return result
