@@ -20,10 +20,35 @@ def train(trainData, width, height, finalDataCoList):
 	for i in range(len(finalDataCoList)):
 		finalDataCoDict[finalDataCoList[i]] = i
 
+	'''
 	del finalDataCoDict["date_time"]
 	del finalDataCoDict["Stock"]
 	finalDataCoList.remove('date_time')
 	finalDataCoList.remove('Stock')
+	print(finalDataCoList)
+	print(finalDataCoDict)
+	'''
+
+	if 'date_time' in finalDataCoList:
+		finalDataCoList.remove('date_time')
+	if 'Stock' in finalDataCoList:
+		finalDataCoList.remove('Stock')
+	if 'date' in finalDataCoList:
+		finalDataCoList.remove('date')
+	if 'time' in finalDataCoList:
+		finalDataCoList.remove('time')
+
+	if 'date_time' in finalDataCoDict:
+		del finalDataCoDict["date_time"]
+	if 'Stock' in finalDataCoDict:
+		del finalDataCoDict["Stock"]
+	if 'date' in finalDataCoDict:
+		del finalDataCoDict["date"]
+	if 'time' in finalDataCoDict:
+		del finalDataCoDict["time"]
+
+	print(finalDataCoList)
+	print(finalDataCoDict)
 
 	if not os.path.exists('Models'):
 		os.mkdir('Models')
@@ -127,10 +152,33 @@ def test(testData, width, height, finalDataCoList):
 	for i in range(len(finalDataCoList)):
 		finalDataCoDict[finalDataCoList[i]] = i
 
+	'''
 	del finalDataCoDict["date_time"]
 	del finalDataCoDict["Stock"]
 	finalDataCoList.remove('date_time')
 	finalDataCoList.remove('Stock')
+	'''
+
+	if 'date_time' in finalDataCoList:
+		finalDataCoList.remove('date_time')
+	if 'Stock' in finalDataCoList:
+		finalDataCoList.remove('Stock')
+	if 'date' in finalDataCoList:
+		finalDataCoList.remove('date')
+	if 'time' in finalDataCoList:
+		finalDataCoList.remove('time')
+
+	if 'date_time' in finalDataCoDict:
+		del finalDataCoDict["date_time"]
+	if 'Stock' in finalDataCoDict:
+		del finalDataCoDict["Stock"]
+	if 'date' in finalDataCoDict:
+		del finalDataCoDict["date"]
+	if 'time' in finalDataCoDict:
+		del finalDataCoDict["time"]
+
+	print(finalDataCoList)
+	print(finalDataCoDict)
 
 	trading_history_file = "trading_history.csv"
 	if os.path.exists(trading_history_file):
