@@ -31,8 +31,8 @@ def train(trainData, width, height, finalDataCoList):
 	color = iter(plt.cm.jet(np.linspace(0, 1, 5)))
 	# Train models using 2 to 6 hours data
 	for i in range(2, 7, 1):
-		input = []  # numDays x i x 2
-		output = []  # numDays
+		input = [] # numDays x i x 2
+		output = [] # numDays
 
 		# Each day array is consisted of 7 rows
 		for day in trainData:
@@ -180,9 +180,9 @@ def test(testData, width, height, finalDataCoList):
 			pred = model.predict([[dayInput]])[0][0]
 
 			# evaluation
-			inputeval = []  # numDays x i x 2
+			inputeval = [] # numDays x i x 2
 			inputeval.append(dayInput)
-			outputeval = []  # numDays
+			outputeval = [] # numDays
 			lastPrice = day[i - 1][finalDataCoDict['Open']]
 			maxPrice = max([item[finalDataCoDict['Open']] for item in day[i:]])
 			# heuristic = (maxPrice / lastPrice - 0.97) / (1.03 - 0.97)
