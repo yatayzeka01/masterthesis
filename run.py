@@ -23,7 +23,7 @@ def main(command, input_path, output_path, min_time_interval_size, min_number_of
 		Make future predictions
 		COMMAND: train|predict|overall
 		Sample run command:
-		python3 run.py overall -i data -o info.txt -min_s 7 -min_d 800 -sdate '01.01.2015' -t 1
+		python3 run.py overall -i data -o info.txt -min_s 7 -min_d 800 -sdate '01.01.2015' -t 1 -u 1
 	"""
 
 	for m in get_monitors():
