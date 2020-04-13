@@ -151,7 +151,7 @@ def prepare(input_path, time_interval, valid_stocks_list, tiFlag, width, height,
     combinedData = combinedData.dropna()
 
     # Scale the Volume and Open columns between 0 and 1
-    combinedData = minmaxnormalize(combinedData, time_interval)
+    combinedData = minmaxnormalize(combinedData, time_interval, tiFlag)
 
     # Write out short info about the dataset
     info(combinedData, time_interval, input_path)
@@ -239,7 +239,6 @@ def technical_indicators(tiDF, usdflag):
 
     ohlcv.rename(columns={'Date': 'date_time'}, inplace=True)
 
-
     pd.options.display.max_columns = None
     pd.options.display.max_rows = None
 
@@ -255,7 +254,7 @@ def technical_indicators(tiDF, usdflag):
     return result
 
 
-def minmaxnormalize(dfToNormalize, time_interval):
+def minmaxnormalize(dfToNormalize, time_interval, tiflag):
     # Clean the data after normalization and remove the rows with Volume and Open values as 0.0
     i = list(dfToNormalize.columns)
     i.remove('Stock')
@@ -264,8 +263,12 @@ def minmaxnormalize(dfToNormalize, time_interval):
     leno = len(time_interval)
     mms = MinMaxScaler()
     dfToNormalize[i] = mms.fit_transform(dfToNormalize[i])
-    zerodays = dfToNormalize.loc[
-        (dfToNormalize[i[0]] == 0.0) | (dfToNormalize[i[1]] == 0.0) | (dfToNormalize[i[2]] == 0.0)]
+    print(dfToNormalize.head(5))
+    if tiflag:
+        zerodays = dfToNormalize.loc[
+            (dfToNormalize[i[0]] == 0.0) | (dfToNormalize[i[1]] == 0.0) | (dfToNormalize[i[2]] == 0.0)]
+    else:
+        zerodays = dfToNormalize.loc[(dfToNormalize[i[0]] == 0.0) | (dfToNormalize[i[1]] == 0.0)]
     zerodays['date_to_remove'] = zerodays['date_time'].dt.date
     zerodayextended = zerodays[['date_to_remove', 'Stock']]
     zerodayslistindex = zerodayextended['date_to_remove'].to_string(index=False).split('\n')
